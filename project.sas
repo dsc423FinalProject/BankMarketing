@@ -87,20 +87,32 @@ RUN;
 	2.  Either remove some observations of 'no', add in more 'yes' samples, or both. 
 */
 
+* Explore data to check for multicollinearity amongst independent, non-categorical variables;
+PROC CORR;
+	TITLE "Pearson Correlation Coefficients of Independent Variables";
+	VAR age duration campaign pdays previous emp_var_rate cons_price_idx cons_conf_idx euribor3m nr_employed;
+RUN;
+
+
 * Run Logistic Regression on the full model;
 PROC LOGISTIC;
 	TITLE "Logistic Regression on Full Model";
 	MODEL target (event='1') = age duration campaign pdays previous emp_var_rate cons_price_idx cons_conf_idx euribor3m nr_employed job1 job2 job3 job4 job5 job6 job7 job8 job9 job10 job11 marital1 marital2 marital3 ed0 ed1 ed2 ed3 ed4 ed5 ed6 credit_default housing_loan has_loan cellphone month3 month4 month5 month6 month7 month8 month9 month10 month11 month12 day1 day2 day3 day4 day5 prev_outcome1 prev_outcome2 prev_outcome3  / STB RSQUARE;
 RUN;
 
+* Run backward selection method for logistic regression;
+PROC LOGISTIC;
+	TITLE "Backwards selection method";
+	MODEL target (event='1') = age duration campaign pdays previous emp_var_rate cons_price_idx cons_conf_idx euribor3m nr_employed job1 job2 job3 job4 job5 job6 job7 job8 job9 job10 job11 marital1 marital2 marital3 ed0 ed1 ed2 ed3 ed4 ed5 ed6 credit_default housing_loan has_loan cellphone month3 month4 month5 month6 month7 month8 month9 month10 month11 month12 day1 day2 day3 day4 day5 prev_outcome1 prev_outcome2 prev_outcome3  / SELECTION=BACKWARD RSQUARE STB;
+RUN;
 
-* Run a selection method for logistic regression;
+* Run stepwise selection method for logistic regression;
 PROC LOGISTIC;
 	TITLE "Stepwise selection method";
-	MODEL target (event='1') = age duration campaign pdays previous emp_var_rate cons_price_idx cons_conf_idx euribor3m nr_employed job1 job2 job3 job4 job5 job6 job7 job8 job9 job10 job11 marital1 marital2 marital3 ed0 ed1 ed2 ed3 ed4 ed5 ed6 credit_default housing_loan has_loan cellphone month3 month4 month5 month6 month7 month8 month9 month10 month11 month12 day1 day2 day3 day4 day5 prev_outcome1 prev_outcome2 prev_outcome3  / SELECTION=STEPWISE RSQUARE;
+	MODEL target (event='1') = age duration campaign pdays previous emp_var_rate cons_price_idx cons_conf_idx euribor3m nr_employed job1 job2 job3 job4 job5 job6 job7 job8 job9 job10 job11 marital1 marital2 marital3 ed0 ed1 ed2 ed3 ed4 ed5 ed6 credit_default housing_loan has_loan cellphone month3 month4 month5 month6 month7 month8 month9 month10 month11 month12 day1 day2 day3 day4 day5 prev_outcome1 prev_outcome2 prev_outcome3  / SELECTION=STEPWISE RSQUARE STB;
 RUN;
-/* RSQUARE = 0.2637 
-Month5 (May) was seen as significant in the STEPWISE selection method. 
+
+/* Month5 (May) was seen as significant in the STEPWISE selection method. 
 This is biased because it's the month with the most calls.
 Month3 (March) followed as significant. It has the 2nd lowest frequency (good thing), 
 but it's also the 1st month of the campaign. Finally, month6 (June) followed as significant. 
@@ -120,22 +132,33 @@ more variance and increase the probability that event Y will occur.
 
 
 * Run Logistic Regression on the selected variables;
-/*PROC LOGISTIC;
-	TITLE "Stepwise selection method";
-	MODEL target (event='1') = duration cons_conf_idx nr_employed cellphone month3 month5 month6 prev_outcome3  / RSQUARE;
-RUN;*/
+PROC LOGISTIC;
+	TITLE "Logistic Regression on Stepwise selection method's predictors";
+	MODEL target (event='1') = duration cons_conf_idx nr_employed cellphone month3 month5 month6 prev_outcome3  / RSQUARE STB CORRB;
+RUN;
+
+PROC LOGISTIC;
+	TITLE "Logistic Regression on Backward selection method's predictors";
+	MODEL target (event='1') = duration emp_var_rate cons_price_idx cons_conf_idx cellphone month3 month6 month8 prev_outcome3  / RSQUARE STB CORRB;
+RUN;
+
 
 * Compare their Adj-R2 value, etc;
+	* See Project_Analysis.docx;
 
 * Check for multicollinearity - Pearson Correlation;
+	* Requires CORRB option at the end of PROC LOGISTIC MODEL;
 * Check for outliers - Pearson or Deviance Residuals +-3;
+	* Requires IPLOTS option;
 * Check for influential points - DFBetas;
+	* Requires INFLUENCE option;
+
 /* Create a new table that:
 	- Removes outlier rows;
 	- Removed rows with above-mentioned critera;
 */
 
-* Run selection & logistic regression again to see if ADJ-R2 improved;
+* Run selection & logistic regression again to see if metrics improved;
  
 
 

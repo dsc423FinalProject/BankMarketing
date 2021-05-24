@@ -82,7 +82,7 @@ RUN;
 		- Slide 35 of Lecture 7 states 10-30 cases per independent variable. 53 (w/dummy) * 10 = 530 observations we should have.
 		" - Make sure it has enough observations for each case (1 & 0).
 		If there isn't enough samples or there are many cells with no response, 
-		parameter estimates and standard errors are likely to be unstable & maximum likelihodd estimation
+		parameter estimates and standard errors are likely to be unstable & maximum likelihood estimation
 		(MLE) of params could be impossible to obtain."
 	2.  Either remove some observations of 'no', add in more 'yes' samples, or both. 
 */
@@ -129,57 +129,56 @@ Another option could be to add in more 'yes' samples from the full dataset to ad
 more variance and increase the probability that event Y will occur.
 */
 
+* Compare their Adj-R2 value, etc;
+	* Backwards selelction won.  See Project_Analysis.docx;
 
 
 * Run Logistic Regression on the selected variables;
-PROC LOGISTIC;
-	TITLE "Logistic Regression on Stepwise selection method's predictors";
-	MODEL target (event='1') = duration cons_conf_idx nr_employed cellphone month3 month5 month6 prev_outcome3  / RSQUARE STB CORRB;
-RUN;
-
-PROC LOGISTIC;
-	TITLE "Logistic Regression on Backward selection method's predictors";
-	MODEL target (event='1') = duration emp_var_rate cons_price_idx cons_conf_idx cellphone month3 month6 month8 prev_outcome3  / RSQUARE STB CORRB;
-RUN;
-
-
-* Compare their Adj-R2 value, etc;
-	* See Project_Analysis.docx;
-
 * Check for multicollinearity - Pearson Correlation;
 	* Requires CORRB option at the end of PROC LOGISTIC MODEL;
 * Check for outliers - Pearson or Deviance Residuals +-3;
 	* Requires IPLOTS option;
 * Check for influential points - DFBetas;
 	* Requires INFLUENCE option;
+PROC LOGISTIC;
+	TITLE "Logistic Regression on Backward selection method's predictors";
+	MODEL target (event='1') = duration emp_var_rate cons_price_idx cons_conf_idx cellphone month3 month6 month8 prev_outcome3  / RSQUARE STB CORRB IPLOTS INFLUENCE;
+RUN;
 
-/* Create a new table that:
-	- Removes outlier rows;
-	- Removed rows with above-mentioned critera;
-*/
+* Create a new table that removes outlier rows;
+DATA bank_new2;
+	TITLE "Bank data w/ removed outliers";
+	SET bank_new;
+	IF _n_ IN (1093, 1012, 1119, 1323, 1448, 1499, 1500, 1580, 1693, 1797, 3082) THEN DELETE;
+RUN;
+PROC PRINT;
+RUN;
 
 * Run selection & logistic regression again to see if metrics improved;
+PROC LOGISTIC;
+	TITLE "Logistic Regression w/Removed outliers (M3)";
+	MODEL target (event='1') = duration emp_var_rate cons_price_idx cons_conf_idx cellphone month3 month6 month8 prev_outcome3  / RSQUARE STB CORRB IPLOTS INFLUENCE;
+RUN;
  
 
 
+* Create a new table that removes outliers 2;
+DATA bank_new2;
+	TITLE "Bank data w/ removed outliers 2";
+	SET bank_new2;
+	IF _n_ IN (531, 712, 860, 940,  1835, 1860) THEN DELETE;
+RUN;
+* Run selection & logistic regression again to see if metrics improved;
+PROC LOGISTIC;
+	TITLE "Logistic Regression w/removed outliers (M4)";
+	MODEL target (event='1') = duration emp_var_rate cons_price_idx cons_conf_idx cellphone month3 month6 month8 prev_outcome3  / RSQUARE STB CORRB IPLOTS INFLUENCE;
+RUN;
+ 
+* Before I continue improving the model, I'm going to test if a smaller dataset size improves our model;
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+* Create a new table that removes rows with above-mentioned critera;
+* Run selection & logistic regression again to see if metrics improved;
 
 
 

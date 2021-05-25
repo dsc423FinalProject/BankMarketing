@@ -93,7 +93,6 @@ PROC CORR;
 	VAR age duration campaign pdays previous emp_var_rate cons_price_idx cons_conf_idx euribor3m nr_employed;
 RUN;
 
-
 * Run Logistic Regression on the full model;
 PROC LOGISTIC;
 	TITLE "Logistic Regression on Full Model";
@@ -177,79 +176,11 @@ RUN;
 * Before I continue improving the model, I'm going to test if a smaller dataset size improves our model;
 
 
+
+
 * Create a new table that removes rows with above-mentioned critera;
-* Import SMALL-BANK dataset;
-DATA bank_small;
-INFILE "small-bank.csv" FIRSTOBS=2 DELIMITER=',';
-INPUT i age job $ marital $ education $ default $ housing $ loan $ contact $ month $ day_of_week $ duration campaign pdays previous poutcome $ emp_var_rate cons_price_idx cons_conf_idx euribor3m nr_employed y $;
-DROP i;
-job1=(job='blue-collar');
-job2=(job='services');
-job3=(job='admin.');
-job4=(job='self-employed');
-job5=(job='technician');
-job6=(job='management');
-job7=(job='retired');
-job8=(job='entrepreneur');
-job9=(job='housemaid');
-job10=(job='unemployed');
-job11=(job='student');
-marital1=(marital='married');
-marital2=(marital='single');
-marital3=(marital='divorced'); 
-ed0=(education='illiterate');
-ed1=(education='basic.4y');
-ed2=(education='basic.6y');
-ed3=(education='basic.9y');
-ed4=(education='high.school');
-ed5=(education='professional.course');
-ed6=(education='university.degree');
-credit_default=(default='yes'); 
-housing_loan=(housing='yes');
-has_loan=(loan='yes');
-cellphone=(contact='cellular');
-month3=(month='mar');
-month4=(month='apr');
-month5=(month='may');
-month6=(month='jun');
-month7=(month='jul');
-month8=(month='aug');
-month9=(month='sep');
-month10=(month='oct');
-month11=(month='nov');
-month12=(month='dec');
-day1=(day_of_week='mon');
-day2=(day_of_week='tue');
-day3=(day_of_week='wed');
-day4=(day_of_week='thu');
-day5=(day_of_week='fri');
-prev_outcome1=(poutcome='failure');
-prev_outcome2=(poutcome='nonexistent');
-prev_outcome3=(poutcome='success');
-RUN;
-
-DATA bank_small_new;
-	TITLE "Bank Small New";
-	SET bank_small;
-	DROP job marital education month default housing loan contact day_of_week poutcome;
-RUN;
-PROC PRINT;
-RUN;
-
-PROC LOGISTIC;
-	TITLE "Backwards selection method on Bank Small New";
-	MODEL y (event='1') = age duration campaign pdays previous emp_var_rate cons_price_idx cons_conf_idx euribor3m nr_employed job1 job2 job3 job4 job5 job6 job7 job8 job9 job10 job11 marital1 marital2 marital3 ed0 ed1 ed2 ed3 ed4 ed5 ed6 credit_default housing_loan has_loan cellphone month3 month4 month5 month6 month7 month8 month9 month10 month11 month12 day1 day2 day3 day4 day5 prev_outcome1 prev_outcome2 prev_outcome3  / SELECTION=BACKWARD RSQUARE STB;
-RUN;
-
-* Run stepwise selection method for logistic regression;
-PROC LOGISTIC;
-	TITLE "Stepwise selection method on Bank Small New";
-	MODEL y (event='1') = age duration campaign pdays previous emp_var_rate cons_price_idx cons_conf_idx euribor3m nr_employed job1 job2 job3 job4 job5 job6 job7 job8 job9 job10 job11 marital1 marital2 marital3 ed0 ed1 ed2 ed3 ed4 ed5 ed6 credit_default housing_loan has_loan cellphone month3 month4 month5 month6 month7 month8 month9 month10 month11 month12 day1 day2 day3 day4 day5 prev_outcome1 prev_outcome2 prev_outcome3  / SELECTION=STEPWISE RSQUARE STB;
-RUN;
-
-
-* SMALL-BANK2;
-DATA bank_small2;
+* SMALL-BANK2 WINS: 1000 observations, small_bank2, backwards selection;
+DATA small_bank2;
 INFILE "small-bank2.csv" FIRSTOBS=2 DELIMITER=',';
 INPUT i age job $ marital $ education $ default $ housing $ loan $ contact $ month $ day_of_week $ duration campaign pdays previous poutcome $ emp_var_rate cons_price_idx cons_conf_idx euribor3m nr_employed y $;
 DROP i;
@@ -301,24 +232,132 @@ RUN;
 PROC PRINT;
 RUN;
 
-DATA bank_small_new2;
-	TITLE "Bank Small New 2";
-	SET bank_small2;
+DATA small_bank2_new;
+	TITLE "Small Bank New 2";
+	SET small_bank2;
 	DROP job marital education month default housing loan contact day_of_week poutcome y;
 RUN;
 PROC PRINT;
 RUN;
 
+* Create correlation matrices to observe multicollinearity amongst independent, non-categorical variables;
+PROC CORR;
+	TITLE "Pearson Correlation Coefficients of Independent Variables";
+	VAR age duration campaign pdays previous emp_var_rate cons_price_idx cons_conf_idx euribor3m nr_employed;
+RUN;
+
+* Fit full regression model with all significant variables; 
+* Analyze parameter estimates, significance, goodness-of-fit, and Adj. R2 values.;
+PROC LOGISTIC;
+	TITLE "Logistic Regression on Full Model with Diagnostics";
+	MODEL target (event='1') = age duration campaign pdays previous emp_var_rate cons_price_idx cons_conf_idx euribor3m nr_employed job1 job2 job3 job4 job5 job6 job7 job8 job9 job10 job11 marital1 marital2 marital3 ed0 ed1 ed2 ed3 ed4 ed5 ed6 credit_default housing_loan has_loan cellphone month3 month4 month5 month6 month7 month8 month9 month10 month11 month12 day1 day2 day3 day4 day5 prev_outcome1 prev_outcome2 prev_outcome3  / STB RSQUARE CORRB IPLOTS INFLUENCE;
+RUN;
+
+* 3.	Apply various selection methods to find a subset of optimal predictors;
+* Run backward selection method for logistic regression;
 PROC LOGISTIC;
 	TITLE "Backwards selection method on Bank Small New 2";
 	MODEL target (event='1') = age duration campaign pdays previous emp_var_rate cons_price_idx cons_conf_idx euribor3m nr_employed job1 job2 job3 job4 job5 job6 job7 job8 job9 job10 job11 marital1 marital2 marital3 ed0 ed1 ed2 ed3 ed4 ed5 ed6 credit_default housing_loan has_loan cellphone month3 month4 month5 month6 month7 month8 month9 month10 month11 month12 day1 day2 day3 day4 day5 prev_outcome1 prev_outcome2 prev_outcome3  / SELECTION=BACKWARD RSQUARE STB;
 RUN;
 
+* Run stepwise selection method for logistic regression;
 PROC LOGISTIC;
 	TITLE "Stepwise selection method on Bank Small New 2";
 	MODEL target (event='1') = age duration campaign pdays previous emp_var_rate cons_price_idx cons_conf_idx euribor3m nr_employed job1 job2 job3 job4 job5 job6 job7 job8 job9 job10 job11 marital1 marital2 marital3 ed0 ed1 ed2 ed3 ed4 ed5 ed6 credit_default housing_loan has_loan cellphone month3 month4 month5 month6 month7 month8 month9 month10 month11 month12 day1 day2 day3 day4 day5 prev_outcome1 prev_outcome2 prev_outcome3  / SELECTION=STEPWISE RSQUARE STB;
 RUN;
 
+* 4. Determine if multi-collinearity among the independent variables is of significant concern using CORRB option;
+* 5. Analyze residual plots to check for outliers;
+PROC LOGISTIC;
+	TITLE "Logistic Regression w/Backwards Selected variables - Small Bank 2";
+	MODEL target (event='1') = duration emp_var_rate cons_price_idx cons_conf_idx nr_employed ed1 cellphone month3 month8 month9 month10 prev_outcome1  / RSQUARE STB CORRB IPLOTS INFLUENCE;
+RUN;
+* MULTICOLINEARITY found between NR_EMPOLYED, CONS_PRICE_IDX & EMP_VAR_RATE;
+* Removing NR_EMPOLYED & rerunning model;
+PROC LOGISTIC;
+	TITLE "Logistic Regression w/Backwards Selected variables - Small Bank 2 (M9)";
+	MODEL target (event='1') = duration emp_var_rate cons_price_idx cons_conf_idx ed1 cellphone month3 month8 month9 month10 prev_outcome1  / RSQUARE STB CORRB IPLOTS INFLUENCE;
+RUN;
 
 
-* M7 WINS: 1000 observations, small_bank2, backwards selection;
+* 6.	Determine/justify if removal of outliers and influential points are necessary;
+* Since we have an abundance of data, I'd say we're justified in removing a few outliers (see jupyter notebook for full view of each of the observations);
+DATA small_bank2_new2;
+	TITLE "Small Bank data w/ removed outliers";
+	SET small_bank2_new;
+	IF _n_ IN (1082, 1045, 418, 320, 318, 261, 248, 230, 26, 66, 11) THEN DELETE;
+RUN;
+PROC PRINT;
+RUN;
+
+PROC LOGISTIC;
+	TITLE "Logistic Regression w/Backwards Selected variables - Small Bank 2 (M10)";
+	MODEL target (event='1') = duration emp_var_rate cons_price_idx cons_conf_idx ed1 cellphone month3 month8 month9 month10 prev_outcome1  / RSQUARE STB CORRB IPLOTS INFLUENCE;
+RUN;
+* more outliers to remove;
+DATA small_bank2_new2;
+	TITLE "Small Bank data w/ removed outliers 3";
+	SET small_bank2_new2;
+	IF _n_ IN (938, 892, 848, 679, 658, 639, 551, 500, 136) THEN DELETE;
+RUN;
+PROC PRINT;
+RUN;
+
+PROC LOGISTIC;
+	TITLE "Logistic Regression w/Backwards Selected variables - Small Bank 2 (M10)";
+	MODEL target (event='1') = duration emp_var_rate cons_price_idx cons_conf_idx ed1 cellphone month3 month8 month9 month10 prev_outcome1  / RSQUARE STB CORRB IPLOTS INFLUENCE;
+RUN;
+
+*7.	Verify the strongest/most influential predictors for the response variable.
+*8.	Split data into training and testing sets for model generation;
+PROC SURVEYSELECT data=small_bank2_new2 OUT=train_test seed=949 samprate=60 outall;
+RUN;
+PROC PRINT;
+RUN;
+
+* check to see if the train/test split was done correctly;
+PROC FREQ;
+TABLES selected;
+RUN;
+
+*3) Compute new variable new_y=target for training set, and NA for test set;
+DATA train_test;
+SET train_test;
+IF selected THEN train_y=target;
+RUN;
+PROC PRINT;
+RUN;
+
+PROC FREQ;
+TABLES train_y;
+RUN;
+* Run selection method on training set, use train_y instead of target variable;
+* Run stepwise selection method for logistic regression;
+PROC LOGISTIC;
+	TITLE "Stepwise selection - Bank Small New 2 - train_y (M12)";
+	MODEL train_y (event='1') = age duration campaign pdays previous emp_var_rate cons_price_idx cons_conf_idx euribor3m nr_employed job1 job2 job3 job4 job5 job6 job7 job8 job9 job10 job11 marital1 marital2 marital3 ed0 ed1 ed2 ed3 ed4 ed5 ed6 credit_default housing_loan has_loan cellphone month3 month4 month5 month6 month7 month8 month9 month10 month11 month12 day1 day2 day3 day4 day5 prev_outcome1 prev_outcome2 prev_outcome3  / SELECTION=STEPWISE RSQUARE STB;
+RUN;
+
+* Run backward selection method for logistic regression;
+PROC LOGISTIC;
+	TITLE "Backwards selection - Bank Small New 2 - train_y (M13)";
+	MODEL train_y (event='1') = age duration campaign pdays previous emp_var_rate cons_price_idx cons_conf_idx euribor3m nr_employed job1 job2 job3 job4 job5 job6 job7 job8 job9 job10 job11 marital1 marital2 marital3 ed0 ed1 ed2 ed3 ed4 ed5 ed6 credit_default housing_loan has_loan cellphone month3 month4 month5 month6 month7 month8 month9 month10 month11 month12 day1 day2 day3 day4 day5 prev_outcome1 prev_outcome2 prev_outcome3  / SELECTION=BACKWARD RSQUARE STB;
+RUN;
+
+
+
+
+
+
+* Run Logistic Regression on the selected variables;
+* Check for multicollinearity - Pearson Correlation;
+	* Requires CORRB option at the end of PROC LOGISTIC MODEL;
+* Check for outliers - Pearson or Deviance Residuals +-3;
+	* Requires IPLOTS option;
+* Check for influential points - DFBetas;
+	* Requires INFLUENCE option;
+PROC LOGISTIC;
+	TITLE "Logistic Regression on Backward selection method's predictors";
+	MODEL target (event='1') = duration emp_var_rate cons_price_idx cons_conf_idx cellphone month3 month6 month8 prev_outcome3  / RSQUARE STB CORRB IPLOTS INFLUENCE;
+RUN;
+

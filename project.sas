@@ -308,7 +308,18 @@ PROC LOGISTIC;
 	MODEL target (event='1') = duration emp_var_rate cons_price_idx cons_conf_idx ed1 cellphone month3 month8 month9 month10 prev_outcome1  / RSQUARE STB CORRB IPLOTS INFLUENCE;
 RUN;
 
-*7.	Verify the strongest/most influential predictors for the response variable.
+* Check the frequency of our target variable to ensure we have enough samples of each side;
+PROC FREQ data=small_bank2_new2;
+	TITLE "Dependent Variable's Frequency";
+	TABLES target;
+RUN;
+/* We have 706 samples of 'no' = 65.98% Probability,
+   and 364 samples of 'yes' = 34.02% Probability. 
+			odds(y=1) = 0.34/0.66 => The odds that event Y = 1 occurs is 0.515 to 1.  This means we have a higher chance of failure.
+			odds(y=0) = 0.66/0.34 => 1.94  to 1 Higher chance of failure.	(slide 8 of lecture 7) */
+
+*7.	Verify the strongest/most influential predictors for the response variable;
+
 *8.	Split data into training and testing sets for model generation;
 PROC SURVEYSELECT data=small_bank2_new2 OUT=train_test seed=949 samprate=60 outall;
 RUN;
@@ -344,20 +355,42 @@ PROC LOGISTIC;
 	MODEL train_y (event='1') = age duration campaign pdays previous emp_var_rate cons_price_idx cons_conf_idx euribor3m nr_employed job1 job2 job3 job4 job5 job6 job7 job8 job9 job10 job11 marital1 marital2 marital3 ed0 ed1 ed2 ed3 ed4 ed5 ed6 credit_default housing_loan has_loan cellphone month3 month4 month5 month6 month7 month8 month9 month10 month11 month12 day1 day2 day3 day4 day5 prev_outcome1 prev_outcome2 prev_outcome3  / SELECTION=BACKWARD RSQUARE STB;
 RUN;
 
-
-
-
-
-
-* Run Logistic Regression on the selected variables;
-* Check for multicollinearity - Pearson Correlation;
-	* Requires CORRB option at the end of PROC LOGISTIC MODEL;
-* Check for outliers - Pearson or Deviance Residuals +-3;
-	* Requires IPLOTS option;
-* Check for influential points - DFBetas;
-	* Requires INFLUENCE option;
-PROC LOGISTIC;
-	TITLE "Logistic Regression on Backward selection method's predictors";
-	MODEL target (event='1') = duration emp_var_rate cons_price_idx cons_conf_idx cellphone month3 month6 month8 prev_outcome3  / RSQUARE STB CORRB IPLOTS INFLUENCE;
+/* VALIDATION METHOD */
+*1.	Compute the PRESS values and cross-validate across n models, where n is equal to the number of independent variables. 
+Eliminate predictors that are not significant in a majority of the generated models. 
+Verify ASE plot and values to determine performance.;
+* Final Model selected uses predictors: duration cons_conf_idx nr_employed cellphone month3 month6 month8.
+See excel spreadsheet for stats;
+*2.	Use the fitted regression model to predict the dependent variable. 
+Using SAS to compute the predicted dependent variable, 95% confidence interval and prediction interval for our estimate;
+*3.	Calculate Sensitivity & specificity for final project.  Do accuracy and precision too (might as well). 
+Sensitivity important to our predicted y = 1 (yes);
+* - Fit the final model, compute predicted value on training set, obtain the cut-off value for p;
+PROC LOGISTIC;  * data=train_test?;
+	TITLE "M12 Final model with training set";
+	*generate the classification table to compute the cutoff value;
+	MODEL train_y(event='1')= duration cons_conf_idx nr_employed cellphone month3 month6 month8 / ctable pprob=(0.1 to 0.8 by 0.05);
+	OUTPUT out=pred (where = (train_y = .)) p=phat lower=lcl upper=ucl;
 RUN;
+* Our cutoff/threshold value of .34 is very close to the Probability level with the highest
+F1 score (sensitivity + Specificity), which was P of 0.35 at F1 score of 174.4;
+
+* 5b. Compute predicted Y in testing set for pred_prob > 0.35;
+* should increase True Positives --> try 0.35, 0.3, 0.2 threshold values;
+DATA probs;
+SET pred;
+pred_y=0;
+*modify threshold here;
+if (phat >= 0.35) THEN pred_y = 1;
+RUN;
+PROC PRINT;
+RUN;
+
+*4.	Compute Confusion/Classification matrix;
+PROC FREQ;
+TABLES target*pred_y / norow nocol nopercent;
+RUN;
+
+
+
 
